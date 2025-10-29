@@ -1,8 +1,41 @@
 <!doctype html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Gerenciar Usuários - Biblioteca</title>
   <link rel="stylesheet" href="/styles.css">
+  <style>
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      align-items: center; justify-content: center;
+    }
+    .modal.active { display: flex; }
+
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      width: 300px;
+      text-align: center;
+    }
+
+    .modal-content input, select {
+      width: 90%;
+      margin: 5px 0;
+      padding: 8px;
+    }
+
+    .modal-content button {
+      margin: 5px;
+    }
+  </style>
 </head>
 <body>
   <main class="container">
@@ -13,15 +46,124 @@
       <div id="adminUsers">Carregando...</div>
     </div>
   </main>
+
+  <div id="userModal" class="modal">
+    <div class="modal-content">
+      <h2 id="modalTitle">Novo Usuário</h2>
+      <input type="text" id="usernameInput" placeholder="Usuário">
+      <input type="password" id="passwordInput" placeholder="Senha">
+      <select id="roleInput">
+        <option value="user">Usuário comum</option>
+        <option value="admin">Administrador</option>
+      </select>
+      <div>
+        <button id="saveUserBtn">Salvar</button>
+        <button id="cancelUserBtn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-  async function fetchJSON(url, opts){ const r = await fetch(url, opts); if(!r.ok) throw await r.json(); return r.json(); }
-  async function load(){ const el = document.getElementById('adminUsers'); try{ const users = await fetchJSON('/api/admin/usuarios'); el.innerHTML = '<table><tr><th>Usuário</th><th>Role</th><th>Ações</th></tr>'+users.map(u=>'<tr><td>'+escape(u.username)+'</td><td>'+escape(u.role)+'</td><td><button data-id="'+u.id+'" class="edit">Editar</button> <button data-id="'+u.id+'" class="del">Excluir</button> <button data-id="'+u.id+'" class="toggle">Tornar admin/us</button></td></tr>').join('')+'</table>'; 
-    document.querySelectorAll('.edit').forEach(btn=>btn.onclick=()=>{ const id=btn.dataset.id; const username=prompt('novo usuário'); const password=prompt('nova senha (vazio mantém)'); if(!username) return; fetch('/api/admin/usuarios/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})}).then(()=>load()).catch(e=>alert('erro')); });
-    document.querySelectorAll('.del').forEach(btn=>btn.onclick=()=>{ if(!confirm('Remover usuário?')) return; const id=btn.dataset.id; fetch('/api/admin/usuarios/'+id,{method:'DELETE'}).then(()=>load()).catch(e=>alert('erro')); });
-    document.querySelectorAll('.toggle').forEach(btn=>btn.onclick=async ()=>{ const id=btn.dataset.id; const users = await fetchJSON('/api/admin/usuarios'); const u = users.find(x=>x.id===id); const newRole = u.role === 'admin' ? 'user' : 'admin'; fetch('/api/admin/usuarios/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:newRole})}).then(()=>load()).catch(e=>alert('erro')); });
-  }catch(err){ el.textContent = 'falha: '+(err.error||JSON.stringify(err)); } }
-  function escape(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
-  document.getElementById('btnAdd').onclick=async ()=>{ const username=prompt('usuário'); const password=prompt('senha'); const role=prompt('role (admin ou user)','user'); if(!username||!password) return; try{ await fetchJSON('/api/admin/usuarios',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,role})}); load(); }catch(e){ alert('erro'); } };
+  async function fetchJSON(url, opts){
+    const r = await fetch(url, opts);
+    if(!r.ok) throw await r.json();
+    return r.json();
+  }
+
+  async function load(){
+    const el = document.getElementById('adminUsers');
+    try{
+      const users = await fetchJSON('/api/admin/usuarios');
+      el.innerHTML = '<table><tr><th>Usuário</th><th>Role</th><th>Ações</th></tr>'+
+        users.map(u=>`
+          <tr>
+            <td>${escape(u.username)}</td>
+            <td>${escape(u.role)}</td>
+            <td>
+              <button data-id="${u.id}" class="edit">Editar</button>
+              <button data-id="${u.id}" class="del">Excluir</button>
+              <button data-id="${u.id}" class="toggle">Tornar admin/us</button>
+            </td>
+          </tr>`).join('')+'</table>';
+
+      // ações
+      document.querySelectorAll('.edit').forEach(btn => btn.onclick = () => openModal('edit', btn.dataset.id));
+      document.querySelectorAll('.del').forEach(btn => btn.onclick = () => {
+        if(!confirm('Remover usuário?')) return;
+        fetch('/api/admin/usuarios/'+btn.dataset.id,{method:'DELETE'})
+          .then(()=>load()).catch(()=>alert('erro'));
+      });
+      document.querySelectorAll('.toggle').forEach(btn => btn.onclick = async () => {
+        const id = btn.dataset.id;
+        const users = await fetchJSON('/api/admin/usuarios');
+        const u = users.find(x=>x.id===id);
+        const newRole = u.role === 'admin' ? 'user' : 'admin';
+        fetch('/api/admin/usuarios/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:newRole})})
+          .then(()=>load()).catch(()=>alert('erro'));
+      });
+    }catch(err){
+      el.textContent = 'falha: '+(err.error||JSON.stringify(err));
+    }
+  }
+
+  function escape(s){
+    return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]);
+  }
+
+  const modal = document.getElementById('userModal');
+  const title = document.getElementById('modalTitle');
+  const usernameInput = document.getElementById('usernameInput');
+  const passwordInput = document.getElementById('passwordInput');
+  const roleInput = document.getElementById('roleInput');
+  const saveBtn = document.getElementById('saveUserBtn');
+  const cancelBtn = document.getElementById('cancelUserBtn');
+
+  let currentAction = null;
+  let currentId = null;
+
+  function openModal(action, id=null){
+    currentAction = action;
+    currentId = id;
+    title.textContent = action === 'edit' ? 'Editar Usuário' : 'Novo Usuário';
+    usernameInput.value = '';
+    passwordInput.value = '';
+    roleInput.value = 'user';
+    modal.classList.add('active');
+  }
+
+  function closeModal(){
+    modal.classList.remove('active');
+  }
+
+  cancelBtn.onclick = closeModal;
+
+  saveBtn.onclick = async ()=>{
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+    const role = roleInput.value;
+    if(!username) return alert('Preencha o nome de usuário');
+
+    try{
+      if(currentAction === 'add'){
+        await fetchJSON('/api/admin/usuarios', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({username, password, role})
+        });
+      } else if(currentAction === 'edit' && currentId){
+        await fetch('/api/admin/usuarios/'+currentId, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({username, password, role})
+        });
+      }
+      closeModal();
+      load();
+    } catch(e){ alert('Erro ao salvar'); }
+  };
+
+  document.getElementById('btnAdd').onclick = ()=>openModal('add');
+
   load();
   </script>
 </body>
