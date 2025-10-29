@@ -14,17 +14,111 @@
       <div id="adminBooks">Carregando...</div>
     </div>
   </main>
+
   <script>
-  async function fetchJSON(url, opts){ const r = await fetch(url, opts); if(!r.ok) throw await r.json(); return r.json(); }
-  async function load(){ const el = document.getElementById('adminBooks'); try{ const books = await fetchJSON('/api/admin/livros'); el.innerHTML = '<table><tr><th>Título</th><th>Autor</th><th>Disponível</th><th>Quem pegou</th><th>Ações</th></tr>'+books.map(b=>'<tr><td>'+escape(b.title)+'</td><td>'+escape(b.author)+'</td><td>'+(b.available?'Sim':'Não')+'</td><td id="br-'+b.id+'">carregando</td><td><button data-id="'+b.id+'" class="edit">Editar</button> <button data-id="'+b.id+'" class="del">Excluir</button> <button data-id="'+b.id+'" class="who">Quem pegou</button></td></tr>').join('')+'</table>'; 
-    // fill borrower info per book
-    books.forEach(async (b)=>{ try{ const info = await fetchJSON('/api/admin/livros/'+b.id+'/borrower'); const elb = document.getElementById('br-'+b.id); if(info.borrower) elb.textContent = info.borrower.username + ' (desde ' + new Date(info.borrower.loan.borrowedAt).toLocaleString() + ')'; else elb.textContent = '-'; }catch(e){ document.getElementById('br-'+b.id).textContent = '-'; } });
-    document.querySelectorAll('.edit').forEach(btn=>btn.onclick=()=>{ const id=btn.dataset.id; const title=prompt('novo título'); const author=prompt('novo autor'); if(!title||!author) return; fetch('/api/admin/livros/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,author})}).then(()=>load()).catch(e=>alert('erro')); });
-    document.querySelectorAll('.del').forEach(btn=>btn.onclick=()=>{ if(!confirm('Remover?')) return; const id=btn.dataset.id; fetch('/api/admin/livros/'+id,{method:'DELETE'}).then(()=>load()).catch(e=>alert('erro')); });
-    document.querySelectorAll('.who').forEach(btn=>btn.onclick=async ()=>{ const id=btn.dataset.id; try{ const info = await fetchJSON('/api/admin/livros/'+id+'/borrower'); alert('Info:\n' + JSON.stringify(info.borrower || 'Ninguém')); }catch(e){ alert('erro'); } });
-  }catch(err){ el.textContent = 'falha: '+(err.error||JSON.stringify(err)); } }
-  function escape(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
-  document.getElementById('btnAdd').onclick=async ()=>{ const title=prompt('título'); const author=prompt('autor'); if(!title||!author) return; try{ await fetchJSON('/api/admin/livros',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,author})}); load(); }catch(e){ alert('erro'); } };
+  async function fetchJSON(url, opts) {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw await r.json();
+    return r.json();
+  }
+
+  async function load() {
+    const el = document.getElementById('adminBooks');
+    try {
+      const books = await fetchJSON('/api/admin/livros');
+
+      el.innerHTML = `
+        <table>
+          <tr>
+            <th>Título</th>
+            <th>Autor</th>
+            <th>Disponível</th>
+            <th>Quem pegou</th>
+            <th>Ações</th>
+          </tr>
+          ${books.map(b => `
+            <tr>
+              <td>${escape(b.title)}</td>
+              <td>${escape(b.author)}</td>
+              <td>${b.available ? 'Sim' : 'Não'}</td>
+              <td id="br-${b.id}">Carregando...</td>
+              <td>
+                <button data-id="${b.id}" class="edit">Editar</button>
+                <button data-id="${b.id}" class="del">Excluir</button>
+              </td>
+            </tr>
+          `).join('')}
+        </table>
+      `;
+
+      // Atualiza coluna "Quem pegou"
+      books.forEach(async (b) => {
+        try {
+          const info = await fetchJSON(`/api/admin/livros/${b.id}/borrower`);
+          const elb = document.getElementById(`br-${b.id}`);
+          if (info.borrower) {
+            elb.textContent = `${info.borrower.username} (desde ${new Date(info.borrower.loan.borrowedAt).toLocaleString()})`;
+          } else {
+            elb.textContent = 'Disponível';
+          }
+        } catch (e) {
+          document.getElementById(`br-${b.id}`).textContent = '-';
+        }
+      });
+
+      // Botão editar
+      document.querySelectorAll('.edit').forEach(btn => {
+        btn.onclick = async () => {
+          const id = btn.dataset.id;
+          const title = prompt('Novo título:');
+          const author = prompt('Novo autor:');
+          if (!title || !author) return;
+          await fetch('/api/admin/livros/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, author })
+          });
+          load();
+        };
+      });
+
+      // Botão excluir
+      document.querySelectorAll('.del').forEach(btn => {
+        btn.onclick = async () => {
+          if (!confirm('Remover este livro?')) return;
+          const id = btn.dataset.id;
+          await fetch('/api/admin/livros/' + id, { method: 'DELETE' });
+          load();
+        };
+      });
+
+    } catch (err) {
+      el.textContent = 'Falha: ' + (err.error || JSON.stringify(err));
+    }
+  }
+
+  function escape(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+    );
+  }
+
+  document.getElementById('btnAdd').onclick = async () => {
+    const title = prompt('Título:');
+    const author = prompt('Autor:');
+    if (!title || !author) return;
+    try {
+      await fetchJSON('/api/admin/livros', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, author })
+      });
+      load();
+    } catch (e) {
+      alert('Erro ao adicionar livro.');
+    }
+  };
+
   load();
   </script>
 </body>
