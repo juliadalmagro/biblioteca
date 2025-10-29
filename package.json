@@ -1,0 +1,16 @@
+{
+  "name": "biblioteca-virtual-admin-crud",
+  "version": "1.0.0",
+  "description": "Biblioteca virtual em memória com CRUDs para admin (livros e usuários)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "uuid": "^9.0.0"
+  }
+}

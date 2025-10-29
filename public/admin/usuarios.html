@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gerenciar Usuários - Biblioteca</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="container">
+    <header class="brand"><h1>Gerenciar Usuários</h1></header>
+    <div class="card">
+      <p><a href="/">Voltar</a></p>
+      <p><button id="btnAdd">Adicionar usuário</button></p>
+      <div id="adminUsers">Carregando...</div>
+    </div>
+  </main>
+  <script>
+  async function fetchJSON(url, opts){ const r = await fetch(url, opts); if(!r.ok) throw await r.json(); return r.json(); }
+  async function load(){ const el = document.getElementById('adminUsers'); try{ const users = await fetchJSON('/api/admin/usuarios'); el.innerHTML = '<table><tr><th>Usuário</th><th>Role</th><th>Ações</th></tr>'+users.map(u=>'<tr><td>'+escape(u.username)+'</td><td>'+escape(u.role)+'</td><td><button data-id="'+u.id+'" class="edit">Editar</button> <button data-id="'+u.id+'" class="del">Excluir</button> <button data-id="'+u.id+'" class="toggle">Tornar admin/us</button></td></tr>').join('')+'</table>'; 
+    document.querySelectorAll('.edit').forEach(btn=>btn.onclick=()=>{ const id=btn.dataset.id; const username=prompt('novo usuário'); const password=prompt('nova senha (vazio mantém)'); if(!username) return; fetch('/api/admin/usuarios/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})}).then(()=>load()).catch(e=>alert('erro')); });
+    document.querySelectorAll('.del').forEach(btn=>btn.onclick=()=>{ if(!confirm('Remover usuário?')) return; const id=btn.dataset.id; fetch('/api/admin/usuarios/'+id,{method:'DELETE'}).then(()=>load()).catch(e=>alert('erro')); });
+    document.querySelectorAll('.toggle').forEach(btn=>btn.onclick=async ()=>{ const id=btn.dataset.id; const users = await fetchJSON('/api/admin/usuarios'); const u = users.find(x=>x.id===id); const newRole = u.role === 'admin' ? 'user' : 'admin'; fetch('/api/admin/usuarios/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:newRole})}).then(()=>load()).catch(e=>alert('erro')); });
+  }catch(err){ el.textContent = 'falha: '+(err.error||JSON.stringify(err)); } }
+  function escape(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+  document.getElementById('btnAdd').onclick=async ()=>{ const username=prompt('usuário'); const password=prompt('senha'); const role=prompt('role (admin ou user)','user'); if(!username||!password) return; try{ await fetchJSON('/api/admin/usuarios',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,role})}); load(); }catch(e){ alert('erro'); } };
+  load();
+  </script>
+</body>
+</html>

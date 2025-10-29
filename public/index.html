@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Biblioteca Virtual</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="container">
+    <header class="brand">
+      <h1>Biblioteca Virtual</h1>
+    </header>
+
+    <section id="loginSection" class="card auth-card">
+      <h2>Entrar</h2>
+      <form id="loginForm">
+        <input name="username" placeholder="usuário" required />
+        <input name="password" type="password" placeholder="senha" required />
+        <button type="submit">Entrar</button>
+      </form>
+      <p>Admin padrão: <b>admin/admin</b> — Usuário exemplo: <b>alice/password</b></p>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <div class="topbar card">
+        <div id="userInfo"></div>
+        <div><button id="logoutBtn">Sair</button></div>
+      </div>
+
+      <nav id="adminNav" class="hidden card">
+        <a href="/admin/livros.html">Gerenciar livros</a> | <a href="/admin/usuarios.html">Gerenciar usuários</a>
+      </nav>
+
+      <section id="booksSection" class="card">
+        <h2>Catálogo</h2>
+        <div id="booksList">Carregando...</div>
+      </section>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
