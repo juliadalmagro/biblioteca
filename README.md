@@ -1,11 +1,9 @@
 # Biblioteca Virtual
 
 Instruções:
-
-1. Extraia o zip.
-2. Rode `npm install`.
-3. Rode `npm start`.
-4. Abra http://localhost:3000 no navegador.
+1. Rode `npm install`.
+2. Rode `npm start`.
+3. Abra http://localhost:3000 no navegador.
 
 Comportamento:
 - Tela inicial mostra apenas login.
