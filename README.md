@@ -11,7 +11,7 @@ Comportamento:
 - Admins têm links para páginas de CRUD: /admin/livros.html e /admin/usuarios.html.
 - Admin pode adicionar/editar/excluir livros e usuários; também pode alternar role de usuário.
 - Admin pode ver quem pegou um livro (usuário & timestamp) via página de livros.
-- Empréstimo e devolução mantêm timestamps (borrowedAt, returnedAt).
+- Empréstimo e devolução mantêm timestamps.
 - Acesso não autorizado a rotas privadas retorna 404.
 - Tudo em memória (arrays). Reiniciar o servidor limpa os dados.
 

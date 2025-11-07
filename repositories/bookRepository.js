@@ -1,9 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
 
 const books = [
-  { id: uuidv4(), title: 'Clean Code', author: 'Robert C. Martin', available: true },
-  { id: uuidv4(), title: 'The Pragmatic Programmer', author: 'Andrew Hunt', available: true },
-  { id: uuidv4(), title: 'You Don\'t Know JS', author: 'Kyle Simpson', available: true }
+  { id: uuidv4(), title: 'A hipótese do amor', author: 'Ali Hazelwood', available: true },
+  { id: uuidv4(), title: 'Um amor problemático de verão', author: 'Ali Hazelwood', available: true },
+  { id: uuidv4(), title: 'É assim que acaba', author: 'Collen Hoover', available: true }
 ];
 
 module.exports = {

@@ -2,7 +2,6 @@ const userService = require('../services/userService');
 const bookService = require('../services/bookService');
 const userRepo = require('../repositories/userRepository');
 
-// Livros - CRUD
 exports.listBooks = (req, res) => {
   res.json(require('../repositories/bookRepository').findAll());
 };
@@ -29,7 +28,6 @@ exports.getBookWithBorrower = (req, res) => {
   res.json({ book, borrower }); // borrower null if nenhum
 };
 
-// Usuários - CRUD e alteração de role
 exports.listUsers = (req, res) => {
   const users = userRepo.findAll().map(u=>({ id:u.id, username:u.username, role:u.role }));
   res.json(users);

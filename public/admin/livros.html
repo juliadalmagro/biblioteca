@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Gerenciar Livros - Biblioteca</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
@@ -14,6 +15,18 @@
       <div id="adminBooks">Carregando...</div>
     </div>
   </main>
+
+  <div id="bookModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <h2 id="modalTitle">Novo Livro</h2>
+      <input type="text" id="titleInput" placeholder="Título do livro">
+      <input type="text" id="authorInput" placeholder="Autor do livro">
+      <div style="margin-top: 12px; display: flex; justify-content: center; gap: 12px;">
+        <button id="saveBookBtn">Salvar</button>
+        <button id="cancelBookBtn" style="background: #6b21a8;">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
   <script>
   async function fetchJSON(url, opts) {
@@ -38,86 +51,122 @@
           </tr>
           ${books.map(b => `
             <tr>
-              <td>${escape(b.title)}</td>
-              <td>${escape(b.author)}</td>
+              <td>${b.title}</td>
+              <td>${b.author}</td>
               <td>${b.available ? 'Sim' : 'Não'}</td>
               <td id="br-${b.id}">Carregando...</td>
               <td>
                 <button data-id="${b.id}" class="edit">Editar</button>
-                <button data-id="${b.id}" class="del">Excluir</button>
+                <button data-id="${b.id}" class="del" style="background:#9333ea;">Excluir</button>
               </td>
             </tr>
           `).join('')}
         </table>
       `;
 
-      // Atualiza coluna "Quem pegou"
       books.forEach(async (b) => {
         try {
           const info = await fetchJSON(`/api/admin/livros/${b.id}/borrower`);
           const elb = document.getElementById(`br-${b.id}`);
-          if (info.borrower) {
-            elb.textContent = `${info.borrower.username} (desde ${new Date(info.borrower.loan.borrowedAt).toLocaleString()})`;
-          } else {
-            elb.textContent = 'Disponível';
-          }
-        } catch (e) {
-          document.getElementById(`br-${b.id}`).textContent = '-';
+          elb.textContent = info.borrower
+            ? `${info.borrower.username} (desde ${new Date(info.borrower.loan.borrowedAt).toLocaleString()})`
+            : 'Disponível';
+        } catch {
+          const elb = document.getElementById(`br-${b.id}`);
+          if (elb) elb.textContent = '-';
         }
       });
 
-      // Botão editar
       document.querySelectorAll('.edit').forEach(btn => {
-        btn.onclick = async () => {
-          const id = btn.dataset.id;
-          const title = prompt('Novo título:');
-          const author = prompt('Novo autor:');
-          if (!title || !author) return;
-          await fetch('/api/admin/livros/' + id, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, author })
-          });
-          load();
-        };
+        btn.onclick = () => openModal('edit', btn.dataset.id);
       });
 
-      // Botão excluir
       document.querySelectorAll('.del').forEach(btn => {
         btn.onclick = async () => {
           if (!confirm('Remover este livro?')) return;
-          const id = btn.dataset.id;
-          await fetch('/api/admin/livros/' + id, { method: 'DELETE' });
+          await fetch('/api/admin/livros/' + btn.dataset.id, { method: 'DELETE' });
           load();
         };
       });
 
     } catch (err) {
-      el.textContent = 'Falha: ' + (err.error || JSON.stringify(err));
+      el.textContent = 'Falha: ' + (err && err.error ? err.error : JSON.stringify(err));
     }
   }
 
-  function escape(s) {
-    return String(s || '').replace(/[&<>"']/g, c =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
-    );
+  const modal = document.getElementById('bookModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const titleInput = document.getElementById('titleInput');
+  const authorInput = document.getElementById('authorInput');
+  const saveBtn = document.getElementById('saveBookBtn');
+  const cancelBtn = document.getElementById('cancelBookBtn');
+
+  let currentAction = null;
+  let currentId = null;
+
+  async function openModal(action, id = null) {
+    currentAction = action;
+    currentId = id;
+    modalTitle.textContent = action === 'edit' ? 'Editar Livro' : 'Novo Livro';
+    titleInput.value = '';
+    authorInput.value = '';
+
+    if (action === 'edit' && id) {
+      try {
+        const book = await fetchJSON('/api/admin/livros/' + id);
+        titleInput.value = book.title || '';
+        authorInput.value = book.author || '';
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    setTimeout(() => titleInput.focus(), 50);
   }
 
-  document.getElementById('btnAdd').onclick = async () => {
-    const title = prompt('Título:');
-    const author = prompt('Autor:');
-    if (!title || !author) return;
+  function closeModal() {
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    currentAction = null;
+    currentId = null;
+  }
+
+  cancelBtn.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    const title = titleInput.value.trim();
+    const author = authorInput.value.trim();
+    if (!title || !author) return alert('Preencha todos os campos.');
+
     try {
-      await fetchJSON('/api/admin/livros', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, author })
-      });
+      if (currentAction === 'add') {
+        await fetchJSON('/api/admin/livros', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, author })
+        });
+      } else if (currentAction === 'edit' && currentId) {
+        await fetchJSON('/api/admin/livros/' + currentId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, author })
+        });
+      }
+      closeModal();
       load();
-    } catch (e) {
-      alert('Erro ao adicionar livro.');
+    } catch (err) {
+      alert('Erro ao salvar livro.');
+      console.error(err);
     }
-  };
+  });
+
+  document.getElementById('btnAdd').addEventListener('click', () => openModal('add'));
 
   load();
   </script>

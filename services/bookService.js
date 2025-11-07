@@ -12,7 +12,6 @@ module.exports = {
     if(!book) throw new Error('Livro não encontrado');
     if(!book.available) throw new Error('Livro já emprestado');
     bookRepo.setAvailability(bookId, false);
-    // register loan on user
     const loan = { bookId, borrowedAt: new Date().toISOString(), returnedAt: null };
     userRepo.addLoanToUser(userId, loan);
     return loan;
